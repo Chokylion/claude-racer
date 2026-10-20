@@ -1,0 +1,38 @@
+{
+  "name": "claude-racer",
+  "version": "2.0.0",
+  "description": "Drag-strip racing game with manual gear shifting, career chapters, and car upgrades",
+  "main": "main.cjs",
+  "author": "KWatamat",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test.mjs",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.0.3",
+    "electron": "28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.kwatamat.clauderacer",
+    "productName": "Claude Racer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "renderer.js",
+      "game.mjs",
+      "index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "Racer.exe"
+    }
+  }
+}

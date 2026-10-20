@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+<title>Claude Racer</title>
+<style>
+  :root{
+    --clay:#d97757; --clay-deep:#c15f3c; --cream:#f0eee6;
+    --panel:#141317; --panel-2:#1c1a20; --line:#2e2b34; --muted:#8a8590;
+    --green:#38d39f; --yellow:#e8b84b; --red:#e5484d; --blue:#4ea1ff; --purple:#a06bff;
+    --font:-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0c;
+    font-family:var(--font);color:var(--cream);user-select:none;cursor:default}
+
+  #titlebar{height:34px;display:flex;align-items:center;gap:10px;padding:0 12px;
+    background:linear-gradient(180deg,#17161a,#101015);border-bottom:1px solid var(--line);-webkit-app-region:drag}
+  #titlebar .logo{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--clay),var(--clay-deep));display:grid;place-items:center}
+  #titlebar .logo svg{width:12px;height:12px}
+  #titlebar h1{font-size:12px;font-weight:800;letter-spacing:.22em}
+  #titlebar h1 span{color:var(--clay)}
+  #titlebar .sp{flex:1}
+  #titlebar .cashTag{font-family:var(--mono);font-size:12px;font-weight:800;color:var(--green);-webkit-app-region:no-drag}
+  .tbtn{-webkit-app-region:no-drag;width:22px;height:22px;border-radius:5px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--muted);cursor:pointer;font-size:11px;display:grid;place-items:center}
+  .tbtn:hover{color:var(--cream);border-color:var(--clay)}
+
+  #stage{position:relative;width:100%;height:calc(100% - 34px)}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column}
+  .screen.on{display:flex}
+
+  .mbtn{padding:14px 28px;border-radius:14px;border:1px solid var(--line);cursor:pointer;
+    background:linear-gradient(180deg,#242029,#17151b);color:var(--cream);font-size:14px;font-weight:700;letter-spacing:.06em;transition:.15s}
+  .mbtn:hover{border-color:var(--clay);background:#2a2531;transform:translateY(-2px)}
+  .mbtn.primary{background:linear-gradient(180deg,var(--clay),var(--clay-deep));border-color:var(--clay)}
+  .mbtn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  /* ═══ MENU ═══ */
+  #menu{align-items:center;justify-content:center;gap:20px;background:radial-gradient(120% 90% at 50% -20%,#211d24,#0c0b0e 70%)}
+  #menu .big{font-size:52px;font-weight:900;letter-spacing:.04em;background:linear-gradient(180deg,#fff,var(--clay));-webkit-background-clip:text;background-clip:text;color:transparent}
+  #menu .sub{color:var(--muted);font-size:13px;letter-spacing:.16em;margin-top:-14px}
+  #menu .card{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  #menu .stats{display:flex;gap:26px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+  #menu .stats b{color:var(--cream)}
+
+  /* ═══ CHAPTER MAP ═══ */
+  #map{padding:16px 22px;gap:12px;background:radial-gradient(120% 90% at 50% -10%,#1e1a22,#0b0a0d 70%)}
+  #map .top{display:flex;align-items:center;gap:14px}
+  #map .top h2{font-size:20px;font-weight:900;letter-spacing:.03em}
+  #chapTabs{display:flex;gap:8px;flex-wrap:wrap}
+  .chapTab{padding:8px 14px;border-radius:10px;border:1px solid var(--line);cursor:pointer;font-size:12px;font-weight:700;
+    background:#17151b;color:var(--muted);transition:.15s;position:relative}
+  .chapTab.on{color:#fff;border-color:var(--clay);background:#2a2531}
+  .chapTab.locked{opacity:.4;cursor:not-allowed}
+  .chapTab .lk{font-size:10px}
+  #chapInfo{background:linear-gradient(180deg,#1a1820,#111016);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+  #chapInfo .cn{font-size:16px;font-weight:800}
+  #chapInfo .ci{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+  #stageGrid{flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-content:start;overflow:auto;padding:4px}
+  .stageCell{border-radius:12px;border:1px solid var(--line);cursor:pointer;min-height:120px;
+    background:linear-gradient(180deg,#1c1a22,#131118);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;transition:.15s;position:relative;overflow:hidden;padding-bottom:6px}
+  .stageCell:hover:not(.locked){border-color:var(--clay);transform:translateY(-2px)}
+  .stageCell .scene{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px;
+    padding:8px 6px 4px;border-bottom:2px solid #2a2730}
+  .stageCell .scene .who{height:64px;display:flex;align-items:flex-end}
+  .stageCell .scene .who svg{height:60px;width:auto;transform-origin:bottom center}
+  .stageCell .scene .ride{height:40px;display:flex;align-items:flex-end}
+  .stageCell .scene .ride svg{height:34px;width:auto}
+  .stageCell .sn{font-size:16px;font-weight:900;margin-top:2px}
+  .stageCell .sl{font-size:8px;letter-spacing:.1em;color:var(--muted)}
+  .stageCell.cleared{border-color:var(--green)}
+  .stageCell.cleared .sn{color:var(--green)}
+  .stageCell.locked{opacity:.4;cursor:not-allowed}
+  .stageCell.locked .scene{filter:grayscale(1) brightness(.5)}
+  .stageCell.boss{grid-column:span 2;background:linear-gradient(135deg,#2a1520,#3a1a2a);border-color:#5a2a3a}
+  .stageCell.boss .sn{font-size:15px}
+  .stageCell.next{box-shadow:0 0 0 2px var(--clay),0 0 16px rgba(217,119,87,.4)}
+  .stageCell .star{position:absolute;top:4px;right:6px;font-size:12px;z-index:2}
+
+  /* ═══ RACE ═══ */
+  #race{background:#0c0b0e}
+  #track{position:relative;flex:1;overflow:hidden;background:linear-gradient(180deg,#0f2338 0%,#274a6b 30%,#5a7fa0 48%,#9ab0c4 52%)}
+  #distanceLabel{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:9;font-family:var(--mono);font-size:12px;color:#eef3fb;letter-spacing:.1em;background:rgba(0,0,0,.4);padding:4px 12px;border-radius:20px}
+  #raceTag{position:absolute;top:10px;left:12px;z-index:9;font-size:11px;font-weight:700;color:#eef3fb;background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px}
+  #sun{position:absolute;top:8%;right:14%;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff6d8,#ffd27a);box-shadow:0 0 50px rgba(255,210,122,.7);z-index:1}
+  .layer{position:absolute;left:0;right:0;z-index:2;background-repeat:repeat-x;will-change:background-position}
+  #farCity{bottom:52%;height:120px;opacity:.55;background-position:0 bottom;background-size:auto 120px}
+  #midCity{bottom:50%;height:150px;opacity:.85;background-position:0 bottom;background-size:auto 150px}
+  #ground{position:absolute;bottom:0;top:52%;left:0;right:0;background:linear-gradient(180deg,#3e6b3a 0%,#2f5230 8%,#243a22 12%,#2a2a30 12%);z-index:2}
+  #trees{bottom:46%;height:90px;background-position:0 bottom;background-size:auto 90px;z-index:3}
+  #road{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:3;background:linear-gradient(180deg,#4a4a52 0%,#3a3a42 30%,#2c2c33 100%)}
+  #roadLines{position:absolute;left:0;right:0;bottom:0;height:46%;z-index:4;background-repeat:repeat-x;will-change:background-position}
+  #curbTop{position:absolute;left:0;right:0;bottom:46%;height:8px;z-index:4;background:repeating-linear-gradient(90deg,#e5484d 0 26px,#f0eee6 26px 52px);background-size:52px 8px;background-repeat:repeat-x;will-change:background-position}
+  .car{position:absolute;height:52px;width:114px;transition:none;will-change:left;z-index:6}
+  .car svg{width:100%;height:100%;filter:drop-shadow(0 8px 7px rgba(0,0,0,.55))}
+  #playerCar{bottom:9%}
+  #oppCar{bottom:30%}
+  .finline{position:absolute;top:52%;bottom:0;width:14px;z-index:5;background:repeating-linear-gradient(180deg,#fff 0 12px,#111 12px 24px);opacity:.95;box-shadow:0 0 12px rgba(255,255,255,.4)}
+  #perfectPop{position:absolute;top:30%;left:50%;transform:translateX(-50%);z-index:8;font-size:22px;font-weight:900;color:var(--green);text-shadow:0 0 12px rgba(56,211,159,.8);opacity:0;pointer-events:none}
+  #perfectPop.show{animation:popFade .7s ease-out}
+  @keyframes popFade{0%{opacity:0;transform:translateX(-50%) scale(.6)}30%{opacity:1;transform:translateX(-50%) scale(1.1)}100%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(1)}}
+
+  /* dashboard */
+  #dash{height:212px;display:flex;gap:14px;padding:12px 16px;background:linear-gradient(180deg,#141216,#0d0c10);border-top:1px solid var(--line)}
+  .tach{position:relative;width:230px;height:188px;flex:0 0 auto;background:radial-gradient(90% 90% at 50% 40%,#1b1920,#0e0d11);border:1px solid var(--line);border-radius:16px;display:grid;place-items:center}
+  .tach svg{width:200px;height:200px}
+  #rpmNum{position:absolute;bottom:44px;font-family:var(--mono);font-size:15px;font-weight:700}
+  #rpmNum small{color:var(--muted);font-size:9px;letter-spacing:.12em;display:block;text-align:center}
+  #shiftLite{position:absolute;top:22px;font-size:10px;font-weight:800;letter-spacing:.2em;padding:3px 10px;border-radius:12px;opacity:0;transition:.1s}
+  #shiftLite.show{opacity:1}
+
+  .center{flex:1;display:flex;flex-direction:column;gap:10px}
+  .gearrow{display:flex;gap:10px;align-items:stretch}
+  #gearBox{width:120px;border-radius:14px;position:relative;overflow:hidden;background:linear-gradient(135deg,#2f7d32 0%,#5a9e2e 45%,#c9a227 100%);border:1px solid #1c1c22;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)}
+  #gearBox.warn{background:linear-gradient(135deg,#8a7a1f 0%,#c98b1f 55%,#e5484d 100%)}
+  #gearBox.over{background:linear-gradient(135deg,#7a1f1f,#e5484d 70%);animation:flash .18s steps(1) infinite}
+  #gearBox.perfect{box-shadow:0 0 0 3px var(--green),0 0 20px rgba(56,211,159,.6) inset}
+  @keyframes flash{50%{filter:brightness(1.5)}}
+  #gearBox .lbl{font-size:9px;letter-spacing:.22em;color:rgba(0,0,0,.55);font-weight:800}
+  #gearBox .num{font-size:58px;font-weight:900;line-height:.9;color:#0d1a0d;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+  #gearBox .of{font-size:10px;color:rgba(0,0,0,.5);font-weight:700}
+
+  .speedBox{flex:1;border-radius:14px;background:linear-gradient(180deg,#17161b,#101015);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;padding:0 18px}
+  .speedBox .v{font-family:var(--mono);font-size:40px;font-weight:800}
+  .speedBox .v small{font-size:13px;color:var(--muted);font-weight:600;margin-left:6px}
+  .speedBox .bar{height:12px;border-radius:8px;background:#0c0b0e;border:1px solid var(--line);margin-top:8px;overflow:hidden}
+  .speedBox .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red))}
+  .metaRow{display:flex;gap:10px}
+  .meta{flex:1;background:linear-gradient(180deg,#17161b,#101015);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+  .meta .k{font-size:8px;letter-spacing:.16em;color:var(--muted)}
+  .meta .val{font-size:16px;font-weight:800;font-family:var(--mono);margin-top:2px}
+  #nitroMeta .val{color:var(--blue)}
+
+  .rightpanel{width:210px;flex:0 0 auto;display:flex;flex-direction:column;gap:8px}
+  .keycap{display:inline-block;min-width:22px;padding:2px 7px;border-radius:6px;border:1px solid var(--line);background:#0c0b0e;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--cream);text-align:center}
+  #shifter{background:linear-gradient(180deg,#17161b,#0e0d11);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+  .sTitle{font-size:8px;letter-spacing:.18em;color:var(--muted);text-align:center;margin-bottom:4px}
+  #sGate{position:relative;height:118px;width:100%;background:radial-gradient(70% 90% at 50% 50%,#211d25,#100e13);border:1px solid #000;border-radius:10px;overflow:hidden}
+  #sGate::before{content:'';position:absolute;left:50%;top:12px;bottom:12px;width:6px;transform:translateX(-50%);border-radius:4px;background:linear-gradient(180deg,#555,#ccc 50%,#444);box-shadow:0 0 6px rgba(0,0,0,.6)}
+  .sLabels{position:absolute;inset:0;pointer-events:none}
+  .sLabels .g{position:absolute;left:8px;font-size:11px;font-weight:800;color:var(--muted);transform:translateY(-50%);transition:color .15s}
+  .sLabels .g.on{color:var(--clay)}
+  #sKnob{position:absolute;left:50%;width:34px;height:34px;transform:translate(-50%,-50%);border-radius:50%;cursor:grab;touch-action:none;z-index:3;background:radial-gradient(circle at 34% 28%,#f2a888,var(--clay) 45%,var(--clay-deep));box-shadow:0 4px 10px rgba(0,0,0,.6),0 0 0 2px rgba(255,255,255,.15) inset,0 0 14px rgba(217,119,87,.5);display:grid;place-items:center;transition:top .18s cubic-bezier(.34,1.4,.5,1)}
+  #sKnob.drag{cursor:grabbing;transition:none;box-shadow:0 6px 14px rgba(0,0,0,.7),0 0 0 2px rgba(255,255,255,.3) inset,0 0 22px rgba(217,119,87,.9)}
+  #sKnob b{font-size:14px;font-weight:900;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);pointer-events:none}
+  #raceMsg{flex:1;border-radius:12px;border:1px solid var(--line);background:radial-gradient(80% 80% at 50% 40%,#1c1a20,#0e0d11);display:grid;place-items:center;text-align:center;padding:10px}
+  #raceMsg .m{font-size:20px;font-weight:900;letter-spacing:.04em}
+  #raceMsg .s{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
+  .endbtns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .endbtns .rbtn{padding:8px 12px;font-size:12px;width:100%}
+  #lights{position:absolute;top:16%;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:7}
+  #lights .l{width:26px;height:26px;border-radius:50%;background:#2a0d0d;border:2px solid #000;box-shadow:inset 0 0 8px rgba(0,0,0,.6)}
+  #lights .l.on{background:radial-gradient(circle at 40% 35%,#ff8a8a,#e5484d);box-shadow:0 0 16px var(--red)}
+  #lights .l.go{background:radial-gradient(circle at 40% 35%,#9dffce,#38d39f);box-shadow:0 0 16px var(--green)}
+
+  /* ═══ SHOP ═══ */
+  #shop{padding:14px 20px;gap:12px;background:radial-gradient(120% 90% at 50% -10%,#1e1a22,#0b0a0d 70%)}
+  #shop .top{display:flex;align-items:center;gap:14px}
+  #shop .top h2{font-size:20px;font-weight:900}
+  #shopTabs{display:flex;gap:8px}
+  .shopTab{padding:8px 18px;border-radius:10px;border:1px solid var(--line);cursor:pointer;font-size:13px;font-weight:700;background:#17151b;color:var(--muted);transition:.15s}
+  .shopTab.on{color:#fff;border-color:var(--clay);background:#2a2531}
+  #shopBody{flex:1;overflow:auto;padding:4px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .card2{background:linear-gradient(180deg,#1a1820,#121016);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+  .card2 .ico{font-size:26px}
+  .card2 .carart{height:56px;display:flex;align-items:center;justify-content:center}
+  .card2 .carart svg{height:52px;width:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+  .card2 .pn{font-size:14px;font-weight:800}
+  .card2 .tier{font-size:10px;color:var(--clay);font-weight:700;letter-spacing:.05em}
+  .card2 .pd{font-size:10px;color:var(--muted);line-height:1.4;flex:1}
+  .pips{display:flex;gap:4px}
+  .pip{flex:1;height:7px;border-radius:4px;background:#26232c;border:1px solid #000}
+  .pip.f{background:linear-gradient(90deg,var(--green),var(--clay))}
+  .btnrow{display:flex;gap:6px}
+  .buy{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);cursor:pointer;background:linear-gradient(180deg,#262029,#17151b);color:var(--cream);font-size:11px;font-weight:700;transition:.15s}
+  .buy:hover:not(:disabled){border-color:var(--clay);background:#2a2531}
+  .buy:disabled{opacity:.4;cursor:not-allowed}
+  .buy.max{color:var(--green);border-color:var(--green)}
+  .buy.tier{color:var(--yellow);border-color:#4a4020}
+  .card2.owned{border-color:var(--green)}
+  .card2.active{border-color:var(--clay);box-shadow:0 0 14px rgba(217,119,87,.3)}
+  .badge{position:absolute;top:10px;right:12px;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px}
+  .badge.on{background:var(--clay);color:#fff}
+  #shop .foot{display:flex;align-items:center;gap:14px}
+  #shop .carstat{display:flex;gap:18px;font-size:12px;font-family:var(--mono);color:var(--muted)}
+  #shop .carstat b{color:var(--cream)}
+</style>
+</head>
+<body>
+  <div id="titlebar">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2c.5 4 2 5.5 6 6-4 .5-5.5 2-6 6-.5-4-2-5.5-6-6 4-.5 5.5-2 6-6Z" fill="#fff"/></svg></div>
+    <h1>CLAUDE <span>RACER</span></h1>
+    <div class="sp"></div>
+    <button class="tbtn" id="add1k" title="+$1000" style="width:auto;padding:0 8px;color:var(--green);border-color:#2a4a3a;font-weight:800">+1K</button>
+    <div class="cashTag" id="cashTag">$0</div>
+    <button class="tbtn" id="sound" title="Mute (M)">🔊</button>
+    <button class="tbtn" id="fs" title="Fullscreen (F11)">⛶</button>
+    <button class="tbtn" id="min">—</button>
+    <button class="tbtn" id="close">✕</button>
+  </div>
+
+  <div id="stage">
+    <!-- MENU -->
+    <div class="screen on" id="menu">
+      <div class="big">CLAUDE RACER</div>
+      <div class="sub">CAREER · MANUAL · TUNE</div>
+      <div class="card">
+        <button class="mbtn primary" id="btnCareer">🏁 CAREER</button>
+        <button class="mbtn" id="btnQuick">⚡ QUICK RACE</button>
+        <button class="mbtn" id="btnShop">🔧 GARAGE</button>
+      </div>
+      <div class="stats">
+        <div>CASH <b id="mCash">$0</b></div>
+        <div>WINS <b id="mWins">0</b></div>
+        <div>RACES <b id="mRaces">0</b></div>
+        <div>PERFECT SHIFTS <b id="mPerfect">0</b></div>
+        <div>TOP SPEED <b id="mTop">0</b></div>
+      </div>
+      <div class="sub" style="font-size:11px;opacity:.7">X = throttle · A/D or ←/→ = shift · SHIFT = nitrous · drag the stick too</div>
+    </div>
+
+    <!-- CHAPTER MAP -->
+    <div class="screen" id="map">
+      <div class="top">
+        <button class="tbtn" id="mapBack" style="width:auto;padding:0 12px;height:30px">‹ MENU</button>
+        <h2>CAREER</h2>
+        <div class="sp" style="flex:1"></div>
+        <button class="mbtn" id="mapShop" style="padding:8px 16px">🔧 GARAGE</button>
+      </div>
+      <div id="chapTabs"></div>
+      <div id="chapInfo"><div class="cn"></div><div class="ci"></div></div>
+      <div id="stageGrid"></div>
+    </div>
+
+    <!-- RACE -->
+    <div class="screen" id="race">
+      <div id="track">
+        <div id="raceTag">—</div>
+        <div id="distanceLabel">0 / 300 m</div>
+        <div id="sun"></div>
+        <div class="layer" id="farCity"></div>
+        <div class="layer" id="midCity"></div>
+        <div id="ground"></div>
+        <div class="layer" id="trees"></div>
+        <div id="road"></div>
+        <div class="layer" id="roadLines"></div>
+        <div id="curbTop"></div>
+        <div id="perfectPop">PERFECT!</div>
+        <div id="lights"><div class="l"></div><div class="l"></div><div class="l"></div></div>
+        <div class="finline" id="finline" style="left:90%"></div>
+        <div class="car" id="oppCar"></div>
+        <div class="car" id="playerCar"></div>
+      </div>
+      <div id="dash">
+        <div class="tach">
+          <svg id="tachSvg" viewBox="0 0 200 200"></svg>
+          <div id="shiftLite">SHIFT ↑</div>
+          <div id="rpmNum">0<small>RPM</small></div>
+        </div>
+        <div class="center">
+          <div class="gearrow">
+            <div id="gearBox">
+              <div class="lbl">GEAR</div>
+              <div class="num" id="gearNum">1</div>
+              <div class="of" id="gearOf">6-speed</div>
+            </div>
+            <div class="speedBox">
+              <div class="v"><span id="speedNum">0</span><small>km/h</small></div>
+              <div class="bar"><i id="speedBar"></i></div>
+              <div class="metaRow" style="margin-top:10px">
+                <div class="meta"><div class="k">DISTANCE</div><div class="val" id="distVal">0 m</div></div>
+                <div class="meta"><div class="k">RIVAL</div><div class="val" id="oppVal">—</div></div>
+                <div class="meta" id="nitroMeta"><div class="k">NITROUS</div><div class="val" id="nitroVal">0</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rightpanel">
+          <div id="shifter">
+            <div class="sTitle">SHIFTER · drag</div>
+            <div id="sGate"><div class="sLabels" id="sLabels"></div><div id="sKnob"><b>1</b></div></div>
+          </div>
+          <div id="raceMsg"><div><div class="m" id="msgM">GET READY</div><div class="s" id="msgS">press X to stage</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="screen" id="shop">
+      <div class="top">
+        <button class="tbtn" id="shopBack" style="width:auto;padding:0 12px;height:30px">‹ BACK</button>
+        <h2>🔧 GARAGE</h2>
+        <div id="shopTabs">
+          <div class="shopTab on" data-tab="parts">PARTS</div>
+          <div class="shopTab" data-tab="cars">CARS</div>
+          <div class="shopTab" data-tab="passives">PASSIVES</div>
+        </div>
+        <div class="sp" style="flex:1"></div>
+        <div class="cashTag" id="shopCash" style="font-size:18px">$0</div>
+      </div>
+      <div id="shopBody"></div>
+      <div class="foot">
+        <div class="carstat">
+          <div>CAR <b id="csCar">—</b></div>
+          <div>POWER <b id="csPower">0</b></div>
+          <div>TOP <b id="csTop">0</b></div>
+          <div>GRIP <b id="csGrip">0</b></div>
+          <div>SHIFT <b id="csShift">0ms</b></div>
+          <div>PERFECT ZONE <b id="csPerfect">±0</b></div>
+        </div>
+        <div class="sp" style="flex:1"></div>
+        <button class="mbtn primary" id="shopRace">▶ RACE</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./renderer.js"></script>
+</body>
+</html>
