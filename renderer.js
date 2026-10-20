@@ -19,9 +19,14 @@ async function loadGame() {
   if (window.racer && window.racer.load) {
     const raw = await window.racer.load();
     if (raw) S = migrate(raw);
+  } else {
+    try { const raw = JSON.parse(localStorage.getItem("claude-racer-save")); if (raw) S = migrate(raw); } catch {}
   }
 }
-function persist() { if (window.racer && window.racer.save) window.racer.save(S); }
+function persist() {
+  if (window.racer && window.racer.save) window.racer.save(S);
+  else { try { localStorage.setItem("claude-racer-save", JSON.stringify(S)); } catch {} }
+}
 
 // ── deterministic-ish rng seeded per race (avoids Date/Math.random ban? no ban here) ──
 function rng() { return Math.random(); }
