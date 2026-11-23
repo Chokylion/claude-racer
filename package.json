@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Drag-strip racing game with manual gear shifting, career chapters, and car upgrades",
   "main": "main.cjs",
-  "author": "KWatamat",
+  "author": "Chokylion",
   "scripts": {
     "start": "electron .",
     "test": "node test.mjs",
@@ -15,7 +15,7 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.kwatamat.clauderacer",
+    "appId": "com.chokylion.clauderacer",
     "productName": "Claude Racer",
     "directories": {
       "output": "dist"
